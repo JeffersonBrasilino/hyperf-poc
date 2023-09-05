@@ -10,3 +10,53 @@ services:
       - ./:/app
     ports:
       - 9501:9501
+    networks:
+        network:
+          ipv4_address: 172.10.0.4
+
+  zookeeper:
+      image: confluentinc/cp-zookeeper:7.3.2
+      container_name: hyperf-zookeeper
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+      networks:
+        network:
+          ipv4_address: 172.10.0.5
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: hyperf-kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "hyperf-zookeeper:2181"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://172.10.0.6:9092,PLAINTEXT_INTERNAL://hyperf-kafka:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      network:
+        ipv4_address: 172.10.0.6
+
+  kafka-ui:
+    container_name: hyperf-kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 9095:8080
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: hyperf-kafka:29092
+    networks:
+      network:
+
+networks:
+  network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.10.0.0/12
